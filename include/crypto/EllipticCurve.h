@@ -2,13 +2,21 @@
 
 #include <gmpxx.h>
 #include <stdint.h>
+#include <random>
 
 // This is a basic struct for a point with arbitrary int precision
 struct Point {
 	mpz_class x;
 	mpz_class y;
+    bool is_infinity;
 };
 
+
+// This is a basic KeyPair struct representing the public and private key pair on a given Elliptic Curve
+struct KeyPair {
+    mpz_class private_key;
+    mpz_class public_key;
+};
 
 /**
  * This class represents an elliptic curve of the form y^2 = x^3 + ax + b [p]
@@ -32,6 +40,17 @@ public:
 	// Just sets the values for this elliptic curve, not much of interest here
 	EllipticCurve(uint32_t a, uint32_t b, const Point& m_gen, const mpz_class& modulus);
 	~EllipticCurve();
+
+    /**
+     * Generate a signature from the SHA256 hash of message using the private_key given in parameter
+     * We can then use the verify function to verify the signature over the elliptic curve
+     */
+    Point generate_signature(const std::string& message, const mpz_class& private_key) const;
+
+    /**
+     * Verifies if the given signature has been signed by the private key paired with the given public key
+     */
+    bool verify_signature(const std::string& message, const Point& signature, const mpz_class& public_key) const;
 
 	/**
 	 * Finds a value of y given the x value of the point we wish to generate
@@ -58,6 +77,12 @@ public:
 	 */
 	bool contains(const Point& p) const;
 
+    /**
+     * Generates a public and private key pair randomly from the current elliptic curve
+     */
+    KeyPair generate_key_pair() const;
+
+    //TODO:
 	void calculate_order();
 
 	mpz_class order();
