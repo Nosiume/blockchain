@@ -11,11 +11,16 @@ struct Point {
     bool is_infinity;
 };
 
+struct Signature {
+    mpz_class r;
+    mpz_class s;
+};
+
 
 // This is a basic KeyPair struct representing the public and private key pair on a given Elliptic Curve
 struct KeyPair {
     mpz_class private_key;
-    mpz_class public_key;
+    Point public_key;
 };
 
 /**
@@ -45,12 +50,12 @@ public:
      * Generate a signature from the SHA256 hash of message using the private_key given in parameter
      * We can then use the verify function to verify the signature over the elliptic curve
      */
-    Point generate_signature(const std::string& message, const mpz_class& private_key) const;
+    Signature generate_signature(const std::string& message, const mpz_class& private_key) const;
 
     /**
      * Verifies if the given signature has been signed by the private key paired with the given public key
      */
-    bool verify_signature(const std::string& message, const Point& signature, const mpz_class& public_key) const;
+    bool verify_signature(const std::string& message, const Signature& signature, const Point& public_key) const;
 
 	/**
 	 * Finds a value of y given the x value of the point we wish to generate

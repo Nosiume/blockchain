@@ -13,10 +13,10 @@ int main() {
 
     KeyPair pair = ec.generate_key_pair();
     std::cout << "Private Key : 0x" << std::hex << pair.private_key << std::endl;
-    std::cout << "Public Key : 0x" << std::hex << pair.public_key << std::endl;
+    std::cout << "Public Key : (x: " << std::hex << pair.public_key.x << ", y: " << pair.public_key.y << ")" << std::endl;
 
-    Point q = ec.generate_signature("hello, world!", pair.private_key);
-    std::cout << "Signature : (" << q.x << ", " << q.y << ")" << std::endl;
+    Signature q = ec.generate_signature("hello, world!", pair.private_key);
+    std::cout << "Signature : (r: " << q.r << ", s: " << q.s << ")" << std::endl;
     std::cout << "Is signature valid : " << ( ec.verify_signature("hello, world!", q, pair.public_key) ? "yes" : "no") << std::endl; 
 	return 0;
 }

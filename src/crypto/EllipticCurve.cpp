@@ -25,16 +25,16 @@ EllipticCurve::~EllipticCurve() {}
 
 // ECDSA
 
-Point EllipticCurve::generate_signature(const std::string& message, const mpz_class& private_key) const {
+Signature EllipticCurve::generate_signature(const std::string& message, const mpz_class& private_key) const {
     gmp_randclass rr(gmp_randinit_default);
     rr.seed(time(0));
    
     mpz_class k = 0;
-    mpz_class x = 0;
-    while(x == 0) {
+    mpz_class r = 0;
+    while(r == 0) {
         k = rr.get_z_range(m_order - 2) + 1;
         Point Q = ec_scalar_mul(m_gen, k);
-        x = Q.x % m_order;
+        r = Q.x % m_order;
     }
 
     SHA256 hash;
@@ -43,37 +43,34 @@ Point EllipticCurve::generate_signature(const std::string& message, const mpz_cl
     mpz_class k_inverse;
     mpz_invert(k_inverse.get_mpz_t(), k.get_mpz_t(), m_order.get_mpz_t());
 
-    mpz_class y = (k_inverse * (m + private_key*x)) % m_order;
-    if(y == 0) return generate_signature(message, private_key); // We start again from the beginning if y = 0
+    mpz_class s = (k_inverse * (m + private_key*r)) % m_order;
+    if(s == 0) return generate_signature(message, private_key); // We start again from the beginning if y = 0
 
-    return {x, y, false};
+    return {r, s};
 }
 
-bool EllipticCurve::verify_signature(const std::string& message, const Point& signature, const mpz_class& public_key) const {
-    Point Q;
-    if(!generate_point_from_x(Q, public_key)) return false;
-    if(!contains(Q)) return false;
-    if(!ec_scalar_mul(Q, m_order).is_infinity) return false;
+bool EllipticCurve::verify_signature(const std::string& message, const Signature& signature, const Point& public_key) const {
+    if(!contains(public_key)) return false;
+    if(!ec_scalar_mul(public_key, m_order).is_infinity) return false;
 
     // Now we check if the signature is in the order of the EC
-    if(signature.is_infinity) return false;
-    if(0 >= signature.x || signature.x >= m_order) return false;
-    if(0 >= signature.y || signature.y >= m_order) return false;
+    if(0 >= signature.r || signature.r >= m_order) return false;
+    if(0 >= signature.s || signature.s >= m_order) return false;
    
     SHA256 hash;
     hash.append(message);
     mpz_class e = hash.as_bigint();
 
     mpz_class s_inverse;
-    mpz_invert(s_inverse.get_mpz_t(), signature.y.get_mpz_t(), m_order.get_mpz_t());
+    mpz_invert(s_inverse.get_mpz_t(), signature.s.get_mpz_t(), m_order.get_mpz_t());
 
     mpz_class u1 = (e * s_inverse) % m_order;
-    mpz_class u2 = (signature.x * s_inverse) % m_order;
+    mpz_class u2 = (signature.r * s_inverse) % m_order;
     
-    Point P = ec_add(ec_scalar_mul(m_gen, u1), ec_scalar_mul(Q, u2));
+    Point P = ec_add(ec_scalar_mul(m_gen, u1), ec_scalar_mul(public_key, u2));
     if(P.is_infinity) return false;
 
-    return (P.x % m_order) == signature.x;
+    return (P.x % m_order) == signature.r;
 }
 
 // Implementation of EC operations
@@ -154,7 +151,7 @@ KeyPair EllipticCurve::generate_key_pair() const {
     rr.seed(time(0));
     mpz_class s = rr.get_z_range(m_order - 2) + 1; // s in the range of 1 to n - 1 with n being the modulus of the EC
     Point Q = ec_scalar_mul(m_gen, s);
-    return {.private_key=s, .public_key=Q.x};
+    return {.private_key=s, .public_key=Q};
 }
 
 void EllipticCurve::calculate_order() {
